@@ -6,6 +6,7 @@ from utils import (
     select_parents,
     crossover,
     mutate,
+    elitism
 )
 import matplotlib.pyplot as plt
 
@@ -21,18 +22,22 @@ def genetic_algorithm(image_path, patch_size, population_size, generations, muta
         print(f"Generation {generation + 1}, Best Fitness: {fitness_scores[best_idx]}")
 
         parents = select_parents(population, fitness_scores)
-        next_population = []
-        for i in range(0, len(parents), 2):
-            parent1, parent2 = parents[i], parents[i + 1]
+        parents = np.array(parents)  
+        next_population = elitism(population, fitness_scores, num_elite=2)  
+
+        while len(next_population) < population_size:
+            if len(parents) < 2:
+                raise ValueError("Parent list has fewer than 2 individuals, cannot perform crossover.")
+            parent_indices = np.random.choice(len(parents), size=2, replace=False)
+            parent1, parent2 = parents[parent_indices[0]], parents[parent_indices[1]]
             child1, child2 = crossover(parent1, parent2)
             next_population.append(mutate(child1, mutation_rate))
             next_population.append(mutate(child2, mutation_rate))
-        population = next_population
+        population = next_population[:population_size]  
 
     final_best = best_individuals[-1]
     final_image = reconstruct_image(final_best, patch_size, original_image.shape)
 
-    # Visualize the results
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
     plt.title("Original Image")
@@ -41,5 +46,3 @@ def genetic_algorithm(image_path, patch_size, population_size, generations, muta
     plt.title("Final Reconstructed Image")
     plt.imshow(final_image, cmap="gray")
     plt.show()
-
-    return best_individuals
